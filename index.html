@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pink Travel Portal</title>
+    <style>
+        /* --- CSS VARIABLES FOR THEMES --- */
+        :root {
+            --bg-overlay: rgba(185, 38, 92, 0.7);
+            --container-bg: rgba(255, 255, 255, 0.85);
+            --text-color: #800040;
+            --btn-bg: #ff99cc;
+            --btn-hover: #800040;
+            --border-color: #ff99cc;
+            --text-shadow: #800040;
+            --shape-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* --- THEME CLASSES --- */
+        body.theme-blue { --bg-overlay: rgba(38, 92, 185, 0.7); --text-color: #003366; --btn-bg: #4da6ff; --btn-hover: #003366; --border-color: #4da6ff; --text-shadow: #003366; --shape-color: rgba(255, 255, 255, 0.3); }
+        body.theme-green { --bg-overlay: rgba(38, 185, 92, 0.7); --text-color: #006600; --btn-bg: #4dff4d; --btn-hover: #006600; --border-color: #4dff4d; --text-shadow: #006600; --shape-color: rgba(255, 255, 255, 0.3); }
+
+        body { 
+            margin: 0;
+            padding: 0;
+            background-image: linear-gradient(var(--bg-overlay), var(--bg-overlay)), 
+                              url('https://images.unsplash.com/photo-1524661135406-3982e5b74798?q=80&w=1000');
+            background-size: cover;
+            background-attachment: fixed;
+            font-family: 'Comic Sans MS', cursive; 
+            text-align: center; 
+            color: white; 
+            transition: background 0.3s;
+            overflow: hidden; /* Prevents scrollbars from shapes */
+        }
+
+        .container { 
+            background: var(--container-bg); 
+            width: 320px; 
+            margin: 80px auto; 
+            padding: 25px; 
+            border-radius: 20px; 
+            border: 2px dashed var(--border-color);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            color: #333;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 { color: #fff; text-shadow: 2px 2px 4px var(--text-shadow); font-size: 2.5em; margin-bottom: 0; }
+        h2 { color: var(--text-color); margin-top: 0; }
+        
+        input, select { 
+            width: 90%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            border-radius: 10px; 
+            border: 1px solid #ffb6c1; 
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .action-btn { 
+            margin-top: 15px; 
+            padding: 12px 30px; 
+            background-color: var(--btn-bg); 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 1.1em;
+            transition: background 0.3s;
+        }
+
+        .action-btn:hover { background-color: var(--btn-hover); }
+
+        .toggle-text { 
+            cursor: pointer; 
+            color: #555; 
+            text-decoration: underline; 
+            font-size: 14px; 
+            margin-top: 20px;
+        }
+
+        .options-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px; 
+            text-align: left; 
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        /* --- DECORATIVE SHAPES --- */
+        .shape {
+            position: fixed;
+            opacity: 0.5;
+            z-index: 1;
+        }
+
+        .triangle {
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 40px solid var(--shape-color);
+        }
+
+        /* Randomly positioned triangles */
+        .tri-1 { top: 10%; left: 5%; transform: rotate(20deg); }
+        .tri-2 { top: 70%; left: 10%; transform: rotate(-40deg); border-bottom: 60px solid var(--shape-color); border-left-width: 30px; border-right-width: 30px; }
+        .tri-3 { top: 20%; right: 10%; transform: rotate(180deg); border-bottom: 50px solid var(--shape-color); }
+        .tri-4 { bottom: 15%; right: 20%; transform: rotate(90deg); border-bottom: 25px solid var(--shape-color); border-left-width: 10px; border-right-width: 10px; }
+        .tri-5 { top: 40%; left: 25%; transform: rotate(150deg); border-bottom: 30px solid var(--shape-color); }
+        .tri-6 { bottom: 5%; left: 40%; transform: rotate(-10deg); border-bottom: 70px solid var(--shape-color); border-left-width: 35px; border-right-width: 35px; }
+        .tri-7 { top: 80%; right: 5%; transform: rotate(60deg); border-bottom: 40px solid var(--shape-color); }
+
+        /* Randomly positioned circles */
+        .circle {
+            background-color: var(--shape-color);
+            border-radius: 50%;
+        }
+
+        .cir-1 { width: 60px; height: 60px; top: 15%; right: 25%; }
+        .cir-2 { width: 30px; height: 30px; bottom: 25%; left: 10%; }
+        .cir-3 { width: 80px; height: 80px; top: 55%; right: 15%; }
+        .cir-4 { width: 40px; height: 40px; bottom: 10%; left: 20%; }
+        .cir-5 { width: 20px; height: 20px; top: 5%; left: 45%; }
+        .cir-6 { width: 50px; height: 50px; bottom: 35%; right: 5%; }
+        
+    </style>
+</head>
+<body>
+    
+    <div class="shape triangle tri-1"></div>
+    <div class="shape triangle tri-2"></div>
+    <div class="shape triangle tri-3"></div>
+    <div class="shape triangle tri-4"></div>
+    <div class="shape triangle tri-5"></div>
+    <div class="shape triangle tri-6"></div>
+    <div class="shape triangle tri-7"></div>
+    
+    <div class="shape circle cir-1"></div>
+    <div class="shape circle cir-2"></div>
+    <div class="shape circle cir-3"></div>
+    <div class="shape circle cir-4"></div>
+    <div class="shape circle cir-5"></div>
+    <div class="shape circle cir-6"></div>
+
+    <h1>✈️ BUCKET LIST 🌴</h1>
+    <p>Your personal travel planner</p>
+    
+    <div class="container">
+        <h2 id="formTitle">Login</h2>
+        
+        <div class="options-grid" id="prefGrid" style="display:none;">
+            <label><input type="checkbox" name="pref" value="Nature"> 🌳 Nature</label>
+            <label><input type="checkbox" name="pref" value="Food"> 🍕 Food</label>
+            <label><input type="checkbox" name="pref" value="City"> 🏙️ City</label>
+            <label><input type="checkbox" name="pref" value="Beach"> 🏖️ Beach</label>
+        </div>
+
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        
+        <select id="themeSelector" onchange="changeTheme()">
+            <option value="pink">Pink Theme</option>
+            <option value="blue">Blue Theme</option>
+            <option value="green">Green Theme</option>
+        </select>
+        
+        <button class="action-btn" onclick="handleAuth()" id="submitBtn">Login</button>
+        <p class="toggle-text" onclick="toggleForm()" id="toggleText">Need an account? Register</p>
+    </div>
+
+    <script>
+        let isLogin = true;
+
+        // --- THEME LOGIC ---
+        function changeTheme() {
+            const theme = document.getElementById('themeSelector').value;
+            document.body.className = ''; // Reset
+            if (theme !== 'pink') {
+                document.body.classList.add('theme-' + theme);
+            }
+            // Temporarily store theme in localStorage to pass to next page
+            localStorage.setItem('tempTheme', theme);
+        }
+
+        function toggleForm() {
+            isLogin = !isLogin;
+            document.getElementById('formTitle').innerText = isLogin ? "Login" : "Register";
+            document.getElementById('submitBtn').innerText = isLogin ? "Login" : "Register";
+            document.getElementById('toggleText').innerText = isLogin ? "Need an account? Register" : "Have an account? Login";
+            document.getElementById('prefGrid').style.display = isLogin ? "none" : "grid";
+        }
+
+        function handleAuth() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const theme = document.getElementById('themeSelector').value;
+            const checkedBoxes = document.querySelectorAll('input[name="pref"]:checked');
+            const selectedPrefs = Array.from(checkedBoxes).map(box => box.value);
+
+            if (!username || !password) {
+                alert("Fill all fields");
+                return;
+            }
+
+            let users = JSON.parse(localStorage.getItem('travelUsers')) || {};
+
+            if (isLogin) {
+                if (users[username] && users[username].password === password) {
+                    localStorage.setItem('currentUser', username);
+                    // Ensure the theme is updated upon login
+                    users[username].theme = theme;
+                    localStorage.setItem('travelUsers', JSON.stringify(users));
+                    window.location.href = "map.html";
+                } else {
+                    alert("Invalid username or password");
+                }
+            } else {
+                if (users[username]) {
+                    alert("Username already exists");
+                } else {
+                    users[username] = { 
+                        password: password, 
+                        prefs: selectedPrefs, 
+                        mapData: {},
+                        theme: theme // Save chosen theme
+                    };
+                    localStorage.setItem('travelUsers', JSON.stringify(users));
+                    localStorage.setItem('currentUser', username);
+                    window.location.href = "map.html";
+                }
+            }
+        }
+
+        // --- LOAD SAVED THEME ON STARTUP ---
+        const savedTheme = localStorage.getItem('tempTheme') || 'pink';
+        document.getElementById('themeSelector').value = savedTheme;
+        changeTheme();
+    </script>
+</body>
+</html>

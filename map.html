@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Planner</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        /* --- CSS VARIABLES FOR THEMES --- */
+        :root {
+            --bg-color: rgb(185, 38, 92);
+            --primary-color: pink;
+            --accent-color: #cc0066;
+            --popup-hover: #ffe6eb;
+            --btn-want: #ff99cc;
+            /* Ratings */
+            --rating-love: #800040;
+            --rating-like: #cc0066;
+            --rating-dislike: #89CFF0;
+        }
+
+        /* --- THEME CLASSES --- */
+        body.theme-blue { --bg-color: rgb(38, 92, 185); --primary-color: #a2d9ff; --accent-color: #0066cc; --popup-hover: #e6f7ff; --btn-want: #99ccff; --rating-love: #003366; --rating-like: #0066cc; --rating-dislike: #89CFF0; }
+        body.theme-green { --bg-color: rgb(38, 185, 92); --primary-color: #a2ffa2; --accent-color: #00cc66; --popup-hover: #e6ffe6; --btn-want: #99ff99; --rating-love: #006600; --rating-like: #00cc66; --rating-dislike: #89CFF0; }
+
+        body { margin: 0; padding: 0; background-color: var(--bg-color); color: white; font-family: 'Comic Sans MS', cursive; transition: background 0.3s; }
+        
+        .container { display: flex; flex-direction: column; height: 100vh; }
+        header { text-align: center; padding: 10px; background: rgba(0,0,0,0.2); }
+        h1 { color: var(--primary-color); margin: 5px; }
+
+        .main-content { display: flex; flex: 1; overflow: hidden; }
+
+        .map-section { flex: 1; position: relative; border: 5px solid var(--primary-color); margin: 10px; border-radius: 15px; overflow: hidden; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
+
+        /* Sidebar Styles */
+        .sidebar { width: 300px; background: rgba(255, 255, 255, 0.9); color: #333; overflow-y: auto; padding: 15px; border-left: 3px solid var(--primary-color); }
+        .sidebar h2 { color: var(--accent-color); margin-top: 0; }
+        
+        .journal-sidebar-item { 
+            background: #fff; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--btn-want); 
+            cursor: pointer; transition: background 0.2s;
+        }
+        .journal-sidebar-item:hover { background: var(--popup-hover); }
+        .journal-sidebar-item h4 { margin: 0; color: var(--accent-color); font-size: 1.1em; }
+
+        .leaflet-container { background-color: #ffd1dc; }
+        .leaflet-tile { filter: hue-rotate(300deg) saturate(1.5) brightness(1.1); }
+        
+        body.theme-blue .leaflet-tile { filter: hue-rotate(180deg) saturate(1.2) brightness(1.1); }
+        body.theme-green .leaflet-tile { filter: hue-rotate(90deg) saturate(1.2) brightness(1.1); }
+
+        .map-overlay { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.8); padding: 10px; border-radius: 10px; color: black; z-index: 1000; width: 220px; }
+        .map-overlay button, .map-overlay select { display: block; width: 100%; margin-bottom: 5px; cursor: pointer; border-radius: 5px; border: none; padding: 5px; box-sizing: border-box;}
+        
+        .btn-want { background-color: var(--btn-want); }
+        .btn-visited { background-color: var(--rating-like); color: white; }
+        .btn-suggestions { background-color: #ffcc00; color: black; font-weight: bold; border: 2px solid #b38f00; }
+
+        /* Adventurous Search Box */
+        .search-box { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 10px; border: 2px solid var(--accent-color); box-sizing: border-box; font-family: sans-serif; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1); }
+
+        /* Popup Styles */
+        .popup-content { font-family: sans-serif; color: black; min-width: 220px; }
+        .popup-btn { padding: 8px; margin: 3px 0; cursor: pointer; border-radius: 5px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; font-weight: bold;}
+        
+        .btn-love { background-color: var(--rating-love); color: white; }
+        .btn-like { background-color: var(--rating-like); color: white; }
+        .btn-dislike { background-color: var(--rating-dislike); color: black; }
+        
+        .quiz-option { display: block; margin: 5px 0; font-size: 14px; }
+        
+        .journal-input { width: 100%; height: 60px !important; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; resize: none; box-sizing: border-box; padding: 5px; font-family: sans-serif; display: block;}
+        .photo-input { width: 100%; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; padding: 5px; font-family: sans-serif; display: block;}
+        
+        /* Secondary Journal Popup Style */
+        .journal-popup-content { font-family: sans-serif; color: black; width: 250px; }
+        .journal-popup-content img { max-width: 100%; border-radius: 5px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1 id="mapTitle">My Travel Planner 🗺️</h1>
+        </header>
+
+        <div class="main-content">
+            <div class="map-section">
+                <div id="map"></div>
+                
+                <div class="map-overlay">
+                    <input type="text" id="countrySearch" class="search-box" placeholder="🔍 Search country...">
+                    
+                    <h3>Bucket List</h3>
+                    <button class="btn-want" onclick="setMode('want')">Want to Visit</button>
+                    <button class="btn-visited" onclick="setMode('visited')">Visited</button>
+                    
+                    <hr>
+                    <select id="themeSelector" onchange="changeTheme()">
+                        <option value="pink">Pink Theme</option>
+                        <option value="blue">Blue Theme</option>
+                        <option value="green">Green Theme</option>
+                    </select>
+                    
+                    <hr>
+                    <button class="btn-suggestions" onclick="window.location.href='suggestions.html'">See Suggestions 🌟</button>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <h2>My Journals 📝</h2>
+                <div id="sidebarContent"></div>
+            </div>
+        </div>
+        
+        <a href="#" onclick="logout()" style="color: var(--primary-color); text-align:center; display:block; padding: 10px;">← Logout</a>
+    </div>
+
+    <script>
+        // --- AUTH CHECK & TITLE ---
+        const currentUser = localStorage.getItem('currentUser');
+        if (!currentUser) {
+            window.location.href = "index.html";
+        }
+        document.getElementById('mapTitle').innerText = currentUser + "'s Travel Journel 🗺️";
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = "index.html";
+        }
+
+        // --- THEME LOGIC ---
+        function changeTheme() {
+            const theme = document.getElementById('themeSelector').value;
+            document.body.className = ''; 
+            if (theme !== 'pink') {
+                document.body.classList.add('theme-' + theme);
+            }
+            let allUsersData = JSON.parse(localStorage.getItem('travelUsers')) || {};
+            if(allUsersData[currentUser]) {
+                allUsersData[currentUser].theme = theme;
+                localStorage.setItem('travelUsers', JSON.stringify(allUsersData));
+            }
+            applySavedStyles();
+        }
+
+        function loadTheme() {
+            let allUsersData = JSON.parse(localStorage.getItem('travelUsers')) || {};
+            const savedTheme = allUsersData[currentUser]?.theme || 'pink';
+            document.getElementById('themeSelector').value = savedTheme;
+            changeTheme();
+        }
+
+        // --- MAP INITIALIZATION ---
+        // 'zoomControl: false' removes the +/- buttons
+        const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        let currentMode = 'visited'; 
+        function setMode(mode) { currentMode = mode; }
+        
+        let geoJsonLayer;
+        let allUsersData = JSON.parse(localStorage.getItem('travelUsers')) || {};
+        let userCountryData = allUsersData[currentUser]?.mapData || {}; 
+        let countryNames = {}; 
+        let countryLayerMap = {}; 
+
+        const worldGeoJSONUrl = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
+
+        fetch(worldGeoJSONUrl)
+            .then(response => response.json())
+            .then(data => {
+                data.features.forEach(feature => {
+                    countryNames[feature.id] = feature.properties.name;
+                });
+                
+                geoJsonLayer = L.geoJson(data, {
+                    style: style,
+                    onEachFeature: onEachFeature
+                }).addTo(map);
+                
+                loadTheme();
+                applySavedStyles();
+                updateSidebar(); 
+            });
+
+        function style(feature) {
+            return { fillColor: '#ffffff', weight: 1, opacity: 1, color: 'var(--primary-color)', fillOpacity: 0.5 };
+        }
+
+        function onEachFeature(feature, layer) {
+            countryLayerMap[feature.id] = layer; 
+
+            if (feature.properties && feature.properties.name) {
+                layer.bindTooltip(feature.properties.name, { sticky: true });
+            }
+
+            layer.on({
+                click: function(e) {
+                    openCountryPopup(feature.id, feature.properties.name, layer);
+                }
+            });
+        }
+
+        // --- OPEN POPUP FUNCTION ---
+        function openCountryPopup(countryId, countryName, layer) {
+            const data = userCountryData[countryId];
+            const interests = data?.interests || [];
+            const photoUrl = data?.photo || "";
+            
+            map.closePopup();
+
+            // SAFETY CHECK: If visited, do not allow changing to 'want' by accident
+            if (currentMode === 'want' && data?.status === 'visited') {
+                // Temporarily force 'visited' mode to open the correct popup
+                let originalMode = currentMode;
+                currentMode = 'visited';
+                openCountryPopup(countryId, countryName, layer);
+                currentMode = originalMode; // Restore mode
+                return;
+            }
+
+            if (currentMode === 'want') {
+                if (data?.status === 'want') {
+                    delete userCountryData[countryId];
+                } else {
+                    userCountryData[countryId] = { status: 'want', rating: null, journal: "", interests: [], photo: "" };
+                }
+                saveAndRefresh();
+            } else {
+                if (!data) {
+                    userCountryData[countryId] = { status: 'visited', rating: null, journal: "", interests: [], photo: "" };
+                }
+                
+                const options = ['Nature', 'Culture', 'Food'];
+                let quizHtml = '<p style="margin: 5px 0;">What did you enjoy most?</p>';
+                options.forEach(opt => {
+                    const checked = interests.includes(opt) ? 'checked' : '';
+                    quizHtml += `<label class="quiz-option"><input type="checkbox" class="interest-checkbox" value="${opt}" ${checked}> ${opt}</label>`;
+                });
+                
+                let popupContent = `
+                    <div class="popup-content">
+                        <h3 style="margin-top:0;">${countryName}</h3>
+                        <p style="margin-bottom:5px;">Rate your visit:</p>
+                        <button class="popup-btn btn-love" onclick="setVisitRating('${countryId}', 'love')">❤️ Love</button>
+                        <button class="popup-btn btn-like" onclick="setVisitRating('${countryId}', 'like')">👍 Like</button>
+                        <button class="popup-btn btn-dislike" onclick="setVisitRating('${countryId}', 'dislike')">👎 Dislike</button>
+                        
+                        <hr style="margin: 10px 0;">
+                        ${quizHtml}
+                        
+                        <p style="margin: 10px 0 5px 0;">Journal your thoughts:</p>
+                        <textarea id="journal-${countryId}" class="journal-input">${userCountryData[countryId].journal || ""}</textarea>
+                        
+                        <p style="margin: 10px 0 5px 0;">Photo Link (URL):</p>
+                        <input type="text" id="photo-${countryId}" class="photo-input" value="${photoUrl}" placeholder="Paste image link here...">
+                        
+                        <button class="popup-btn" style="background-color: #ddd; margin-top:5px;" onclick="saveJournal('${countryId}')">Save Journal</button>
+                        
+                        <hr style="margin: 10px 0;">
+                        <button class="popup-btn" style="background-color: #ffcccc;" onclick="deselectCountry('${countryId}')">❌ Deselect</button>
+                    </div>
+                `;
+                
+                layer.bindPopup(popupContent, { minWidth: 230, closeOnClick: false }).openPopup();
+            }
+        }
+
+        // --- RATING AND JOURNAL LOGIC ---
+        function setVisitRating(countryId, rating) {
+            if (!userCountryData[countryId]) userCountryData[countryId] = { journal: "", interests: [], photo: "" };
+            
+            const checkboxes = document.querySelectorAll('.interest-checkbox:checked');
+            const selectedInterests = Array.from(checkboxes).map(cb => cb.value);
+
+            userCountryData[countryId].status = 'visited';
+            userCountryData[countryId].rating = rating;
+            userCountryData[countryId].interests = selectedInterests;
+            
+            saveAndRefresh();
+            map.closePopup();
+        }
+
+        function saveJournal(countryId) {
+            if (!userCountryData[countryId]) userCountryData[countryId] = { status: 'visited', interests: [], photo: "" };
+            
+            const checkboxes = document.querySelectorAll('.interest-checkbox:checked');
+            const selectedInterests = Array.from(checkboxes).map(cb => cb.value);
+            
+            const text = document.getElementById(`journal-${countryId}`).value;
+            const photo = document.getElementById(`photo-${countryId}`).value;
+            
+            userCountryData[countryId].journal = text;
+            userCountryData[countryId].interests = selectedInterests;
+            userCountryData[countryId].photo = photo;
+            userCountryData[countryId].status = 'visited';
+            
+            saveAndRefresh();
+            alert("Journal and Interests saved!");
+            updateSidebar();
+            map.closePopup();
+        }
+
+        function deselectCountry(countryId) {
+            delete userCountryData[countryId];
+            saveAndRefresh();
+            updateSidebar();
+            map.closePopup();
+        }
+
+        function saveAndRefresh() {
+            allUsersData[currentUser].mapData = userCountryData;
+            localStorage.setItem('travelUsers', JSON.stringify(allUsersData));
+            
+            applySavedStyles();
+            updateSidebar();
+        }
+
+        function applySavedStyles() {
+            geoJsonLayer.eachLayer(layer => {
+                const countryId = layer.feature.id;
+                const data = userCountryData[countryId];
+                
+                if (data) {
+                    let fillColor = '#ffffff';
+                    if (data.status === 'want') {
+                        fillColor = 'var(--btn-want)';
+                    } else if (data.status === 'visited') {
+                        if (data.rating === 'love') fillColor = 'var(--rating-love)';
+                        else if (data.rating === 'dislike') fillColor = 'var(--rating-dislike)';
+                        else fillColor = 'var(--rating-like)'; 
+                    }
+                    layer.setStyle({
+                        fillColor: fillColor, 
+                        fillOpacity: 0.7, 
+                        color: 'var(--primary-color)', 
+                        weight: 2
+                    });
+                } else {
+                    layer.setStyle({
+                        fillColor: '#ffffff', 
+                        fillOpacity: 0.5, 
+                        color: '#aaa', 
+                        weight: 1
+                    });
+                }
+            });
+        }
+            
+        // --- UPDATE SIDEBAR ---
+        function updateSidebar() {
+            const sidebarContent = document.getElementById('sidebarContent');
+            sidebarContent.innerHTML = "";
+            
+            let hasJournals = false;
+            for (const countryId in userCountryData) {
+                const data = userCountryData[countryId];
+                if (data.status === 'visited' && (data.journal && data.journal.trim() !== "" || data.photo && data.photo.trim() !== "")) {
+                    hasJournals = true;
+                    const countryName = countryNames[countryId] || "Unknown Country";
+                    const entry = `
+                        <div class="journal-sidebar-item" onclick="openJournalPopup('${countryId}')">
+                            <h4>${countryName}</h4>
+                        </div>
+                    `;
+                    sidebarContent.innerHTML += entry;
+                }
+            }
+            
+            if (!hasJournals) {
+                sidebarContent.innerHTML = "<p>No journals written yet. Click a visited country on the map to add one!</p>";
+            }
+        }
+        
+        // --- OPEN JOURNAL POPUP (SECONDARY POPUP) ---
+        function openJournalPopup(countryId) {
+            const layer = countryLayerMap[countryId];
+            const data = userCountryData[countryId];
+            
+            if (layer && data) {
+                map.closePopup();
+                
+                let photoHtml = '';
+                if (data.photo && data.photo.trim() !== "") {
+                    photoHtml = `<img src="${data.photo}" alt="Photo of ${countryNames[countryId]}">`;
+                }
+                
+                const popupContent = `
+                    <div class="journal-popup-content">
+                        <h3>${countryNames[countryId]} Journal</h3>
+                        <p>${data.journal}</p>
+                        ${photoHtml}
+                    </div>
+                `;
+                
+                L.popup({closeButton: true})
+                    .setLatLng(layer.getBounds().getCenter())
+                    .setContent(popupContent)
+                    .openOn(map);
+            }
+        }
+
+        // --- SEARCH LOGIC ---
+        document.getElementById('countrySearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            
+            // 1. Reset all styles to their saved state first
+            applySavedStyles();
+            
+            // 2. Handle Search (No Zoom)
+            if (searchTerm.length > 0) {
+                geoJsonLayer.eachLayer(function(layer) {
+                    const countryName = layer.feature.properties.name.toLowerCase();
+                    
+                    if (countryName.includes(searchTerm)) {
+                        // Highlight the matching layer(s)
+                        layer.setStyle({
+                            fillColor: '#ffff00', // Yellow filler for search
+                            fillOpacity: 0.7, 
+                            color: '#0000ff', // Blue border
+                            weight: 3
+                        });
+                        
+                        // Zoom functionality removed here
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

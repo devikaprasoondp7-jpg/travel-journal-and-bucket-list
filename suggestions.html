@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Suggestions</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        /* --- CSS VARIABLES FOR THEMES --- */
+        :root {
+            --bg-color: rgb(185, 38, 92);
+            --primary-color: pink;
+            --accent-color: #cc0066;
+            --text-color: black;
+        }
+
+        /* --- THEME CLASSES --- */
+        body.theme-blue { --bg-color: rgb(38, 92, 185); --primary-color: #a2d9ff; --accent-color: #0066cc; }
+        body.theme-green { --bg-color: rgb(38, 185, 92); --primary-color: #a2ffa2; --accent-color: #00cc66; }
+
+        body { margin: 0; padding: 0; background-color: var(--bg-color); color: white; font-family: 'Comic Sans MS', cursive; transition: background 0.3s; }
+        .container { display: flex; flex-direction: column; height: 100vh; }
+        header { text-align: center; padding: 10px; background: rgba(0,0,0,0.2); }
+        h1 { color: var(--primary-color); margin: 5px; }
+        
+        /* Dashboard Styles */
+        .dashboard { background: rgba(255, 255, 255, 0.9); color: black; padding: 10px; margin: 10px; border-radius: 10px; font-family: sans-serif; display: flex; justify-content: space-around; font-size: 14px; border: 2px solid var(--primary-color);}
+        .dash-item { text-align: center; }
+        .dash-count { font-size: 20px; font-weight: bold; color: var(--accent-color); }
+
+        .map-section { flex: 1; position: relative; border: 5px solid var(--primary-color); margin: 10px; border-radius: 15px; overflow: hidden; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
+        
+        /* Theme Selector in map */
+        .theme-selector { position: absolute; top: 10px; right: 10px; z-index: 1000; padding: 5px; border-radius: 5px; }
+
+        .leaflet-container { background-color: #ffd1dc; }
+        .leaflet-tile { filter: hue-rotate(300deg) saturate(1.5) brightness(1.1); }
+        body.theme-blue .leaflet-tile { filter: hue-rotate(180deg) saturate(1.2) brightness(1.1); }
+        body.theme-green .leaflet-tile { filter: hue-rotate(90deg) saturate(1.2) brightness(1.1); }
+
+        .back-btn { color: var(--primary-color); text-align:center; display:block; padding: 10px; text-decoration: none; font-size: 20px; }
+        
+        /* Popup Style */
+        .popup-content { font-family: sans-serif; color: black; min-width: 200px; }
+        .action-btn { background-color: var(--primary-color); border: none; padding: 8px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="suggestTitle">Your Smart Suggestions 🌟</h1>
+        </header>
+
+        <div class="dashboard" id="interestDashboard">
+            Loading your interests...
+        </div>
+
+        <div class="map-section">
+            <div id="map"></div>
+            <select id="themeSelector" class="theme-selector" onchange="changeTheme()">
+                <option value="pink">Pink</option>
+                <option value="blue">Blue</option>
+                <option value="green">Green</option>
+            </select>
+        </div>
+        <a href="map.html" class="back-btn">← Back to Main Map</a>
+    </div>
+
+    <script>
+        // --- AUTH CHECK ---
+        const currentUser = localStorage.getItem('currentUser');
+        if (!currentUser) {
+            window.location.href = "index.html"; 
+        }
+        document.getElementById('suggestTitle').innerText = currentUser + "'s Suggestions 🌟";
+
+        // --- THEME LOGIC ---
+        function changeTheme() {
+            const theme = document.getElementById('themeSelector').value;
+            document.body.className = '';
+            if (theme !== 'pink') {
+                document.body.classList.add('theme-' + theme);
+            }
+            let allUsersData = JSON.parse(localStorage.getItem('travelUsers')) || {};
+            if(allUsersData[currentUser]) {
+                allUsersData[currentUser].theme = theme;
+                localStorage.setItem('travelUsers', JSON.stringify(allUsersData));
+            }
+        }
+
+        // --- MAP INITIALIZATION ---
+        const map = L.map('map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        const worldGeoJSONUrl = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
+        
+        // --- LOAD PER-USER DATA ---
+        let allUsersData = JSON.parse(localStorage.getItem('travelUsers')) || {};
+        let userCountryData = allUsersData[currentUser]?.mapData || {};
+        
+        let countryNames = {};
+
+        // --- POPULATE DASHBOARD ---
+        function updateDashboard() {
+            const dashboard = document.getElementById('interestDashboard');
+            let interestCounts = { 'Nature': 0, 'Culture': 0, 'Food': 0 };
+            let loveCount = 0;
+
+            for (const id in userCountryData) {
+                if (userCountryData[id].rating === 'love') {
+                    loveCount++;
+                    if (userCountryData[id].interests) {
+                        userCountryData[id].interests.forEach(i => interestCounts[i]++);
+                    }
+                }
+            }
+
+            dashboard.innerHTML = `
+                <div class="dash-item">Loved Places<br><span class="dash-count">${loveCount}</span></div>
+                <div class="dash-item">❤️ Nature<br><span class="dash-count">${interestCounts['Nature']}</span></div>
+                <div class="dash-item">🏛️ Culture<br><span class="dash-count">${interestCounts['Culture']}</span></div>
+                <div class="dash-item">🍕 Food<br><span class="dash-count">${interestCounts['Food']}</span></div>
+            `;
+        }
+
+        fetch(worldGeoJSONUrl)
+            .then(response => response.json())
+            .then(data => {
+                data.features.forEach(feature => {
+                    countryNames[feature.id] = feature.properties.name;
+                });
+                
+                // Load theme
+                const savedTheme = allUsersData[currentUser]?.theme || 'pink';
+                document.getElementById('themeSelector').value = savedTheme;
+                changeTheme();
+                
+                updateDashboard();
+
+                L.geoJson(data, {
+                    style: style,
+                    onEachFeature: onEachFeature
+                }).addTo(map);
+            });
+
+        function style(feature) {
+            return { fillColor: '#ffffff', weight: 1, color: 'var(--primary-color)', fillOpacity: 0.1 };
+        }
+
+        function onEachFeature(feature, layer) {
+            const countryId = feature.id;
+            const countryName = feature.properties.name;
+            const userData = userCountryData[countryId];
+
+            if (userData && userData.status === 'visited') {
+                layer.setStyle({ fillOpacity: 0, stroke: false });
+                return;
+            }
+
+            let fillColor = '#ffffff'; 
+            let fillOpacity = 0; 
+            let popupText = `<h3>${countryName}</h3>`;
+            let isSuggested = false;
+
+            let favoriteInterests = [];
+            for (const id in userCountryData) {
+                if (userCountryData[id].rating === 'love' && userCountryData[id].interests) {
+                    favoriteInterests.push({
+                        countryId: id,
+                        interests: userCountryData[id].interests
+                    });
+                }
+            }
+
+            if (favoriteInterests.length > 0 && Math.random() < 0.15) {
+                fillColor = 'purple';
+                fillOpacity = 0.5;
+                
+                const source = favoriteInterests[Math.floor(Math.random() * favoriteInterests.length)];
+                const sourceName = countryNames[source.countryId];
+                const interest = source.interests[Math.floor(Math.random() * source.interests.length)];
+                
+                popupText += `<p>🌟 Suggested for your love of <strong>${interest}</strong> in <strong>${sourceName}</strong></p>`;
+                isSuggested = true;
+            }
+
+            layer.setStyle({ fillColor: fillColor, fillOpacity: fillOpacity });
+            
+            if (isSuggested) {
+                popupText += `<button class="action-btn" onclick="addToWant('${countryId}')">⚡ Add to Want to Visit</button>`;
+            }
+            
+            layer.bindPopup(`<div class="popup-content">${popupText}</div>`);
+        }
+
+        function addToWant(countryId) {
+            userCountryData[countryId] = { status: 'want', rating: null, journal: "", interests: [], photo: "" };
+            allUsersData[currentUser].mapData = userCountryData;
+            localStorage.setItem('travelUsers', JSON.stringify(allUsersData));
+            alert("Added to Want to Visit list!");
+            map.closePopup();
+            location.reload(); 
+        }
+    </script>
+</body>
+</html>
